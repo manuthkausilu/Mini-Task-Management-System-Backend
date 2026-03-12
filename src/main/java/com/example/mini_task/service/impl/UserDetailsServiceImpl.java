@@ -1,6 +1,5 @@
 package com.example.mini_task.service.impl;
 
-import com.example.mini_task.exception.ResourceNotFoundException;
 import com.example.mini_task.repo.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

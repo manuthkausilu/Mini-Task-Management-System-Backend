@@ -86,7 +86,15 @@ src/main/java/com/example/mini_task
 CREATE DATABASE `mini-task-db`;
 ```
 
-### 3) Configure properties
+### 3) Apply schema (recommended)
+
+Use the schema file to create all tables, constraints, and indexes:
+
+```powershell
+mysql -u root -p < src/main/resources/db/mysql/schema.sql
+```
+
+### 4) Configure properties
 
 Update `src/main/resources/application.properties` for your environment, especially:
 
@@ -95,13 +103,13 @@ Update `src/main/resources/application.properties` for your environment, especia
 - `jwt.secret`
 - `app.bootstrap.admin.*`
 
-### 4) Run the app (Windows)
+### 5) Run the app (Windows)
 
 ```powershell
 .\mvnw.cmd spring-boot:run
 ```
 
-### 5) Build and test (Windows)
+### 6) Build and test (Windows)
 
 ```powershell
 .\mvnw.cmd clean test
