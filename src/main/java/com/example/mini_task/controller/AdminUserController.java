@@ -3,10 +3,7 @@ package com.example.mini_task.controller;
 import com.example.mini_task.dto.auth.AuthResponse;
 import com.example.mini_task.dto.auth.RegisterRequest;
 import com.example.mini_task.entity.User;
-import com.example.mini_task.exception.ApiException;
-import com.example.mini_task.repo.UserRepository;
-import com.example.mini_task.security.RoleChecker;
-import com.example.mini_task.service.AuthenticationService;
+import com.example.mini_task.service.AdminUserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
-    private final UserRepository userRepository;
-    private final AuthenticationService authenticationService;
+    private final AdminUserService adminUserService;
 
     /**
      * Register a new admin user (ADMIN only)
@@ -34,8 +30,8 @@ public class AdminUserController {
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody RegisterRequest request) {
-        log.info("Admin requested admin registration for email: {}", request.getEmail());
-        AuthResponse response = authenticationService.registerAdmin(request);
+        log.info("Received admin registration request for email: {}", request.getEmail());
+        AuthResponse response = adminUserService.registerAdmin(request);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -48,19 +44,10 @@ public class AdminUserController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
 
-        log.info("Admin retrieving all users - page: {}, size: {}", page, size);
+        log.info("Received request to get all users - page: {}, size: {}", page, size);
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<User> users = userRepository.findAll(pageable);
-
-        Page<AuthResponse> responses = users.map(user -> AuthResponse.builder()
-                .userId(user.getId())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole())
-                .build());
-
+        Page<AuthResponse> responses = adminUserService.getAllUsers(pageable);
         return new ResponseEntity<>(responses, HttpStatus.OK);
     }
 
@@ -70,23 +57,8 @@ public class AdminUserController {
      */
     @GetMapping("/{userId}")
     public ResponseEntity<AuthResponse> getUserById(@PathVariable Long userId) {
-
-        log.info("Admin retrieving user with id: {}", userId);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found with id: {}", userId);
-                    return new com.example.mini_task.exception.ResourceNotFoundException("User not found with id: " + userId);
-                });
-
-        AuthResponse response = AuthResponse.builder()
-                .userId(user.getId())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .role(user.getRole())
-                .build();
-
+        log.info("Received request to get user with id: {}", userId);
+        AuthResponse response = adminUserService.getUserById(userId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -99,32 +71,8 @@ public class AdminUserController {
             @PathVariable Long userId,
             @RequestParam User.Role role) {
 
-        log.info("Admin changing user role - userId: {}, newRole: {}", userId, role);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found with id: {}", userId);
-                    return new com.example.mini_task.exception.ResourceNotFoundException("User not found with id: " + userId);
-                });
-
-        long adminCount = userRepository.countByRole(User.Role.ADMIN);
-        if (user.getRole() == User.Role.ADMIN && role == User.Role.USER && adminCount <= 1) {
-            throw new ApiException("Cannot demote the last admin user");
-        }
-
-        user.setRole(role);
-        User updatedUser = userRepository.save(user);
-
-        log.info("User role changed successfully - userId: {}, newRole: {}", userId, role);
-
-        AuthResponse response = AuthResponse.builder()
-                .userId(updatedUser.getId())
-                .email(updatedUser.getEmail())
-                .firstName(updatedUser.getFirstName())
-                .lastName(updatedUser.getLastName())
-                .role(updatedUser.getRole())
-                .build();
-
+        log.info("Received request to change user role - userId: {}, newRole: {}", userId, role);
+        AuthResponse response = adminUserService.changeUserRole(userId, role);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -134,54 +82,19 @@ public class AdminUserController {
      */
     @DeleteMapping("/{userId}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long userId) {
-
-        log.info("Admin deleting user with id: {}", userId);
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> {
-                    log.error("User not found with id: {}", userId);
-                    return new com.example.mini_task.exception.ResourceNotFoundException("User not found with id: " + userId);
-                });
-
-        User currentAdmin = RoleChecker.getCurrentUser();
-        if (currentAdmin != null && currentAdmin.getId().equals(userId)) {
-            throw new ApiException("Admin cannot delete own account");
-        }
-
-        long adminCount = userRepository.countByRole(User.Role.ADMIN);
-        if (user.getRole() == User.Role.ADMIN && adminCount <= 1) {
-            throw new ApiException("Cannot delete the last admin user");
-        }
-
-        userRepository.delete(user);
-
-        log.info("User deleted successfully with id: {}", userId);
-
+        log.info("Received request to delete user with id: {}", userId);
+        adminUserService.deleteUser(userId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     /**
      * Get current admin user info
-     * GET /api/v1/admin/me
+     * GET /api/v1/admin/users/me
      */
     @GetMapping("/me")
     public ResponseEntity<AuthResponse> getCurrentAdminInfo() {
-
-        User currentUser = RoleChecker.getCurrentUser();
-        if (currentUser == null) {
-            throw new com.example.mini_task.exception.AuthenticationException("Current user not found");
-        }
-
-        log.info("Admin retrieving own info - userId: {}", currentUser.getId());
-
-        AuthResponse response = AuthResponse.builder()
-                .userId(currentUser.getId())
-                .email(currentUser.getEmail())
-                .firstName(currentUser.getFirstName())
-                .lastName(currentUser.getLastName())
-                .role(currentUser.getRole())
-                .build();
-
+        log.info("Received request to get current admin info");
+        AuthResponse response = adminUserService.getCurrentAdminInfo();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

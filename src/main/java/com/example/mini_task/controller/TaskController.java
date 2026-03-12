@@ -3,6 +3,7 @@ package com.example.mini_task.controller;
 import com.example.mini_task.dto.TaskRequestDTO;
 import com.example.mini_task.dto.TaskResponseDTO;
 import com.example.mini_task.entity.Task;
+import com.example.mini_task.security.RoleChecker;
 import com.example.mini_task.security.SecurityContextUtil;
 import com.example.mini_task.service.TaskService;
 import jakarta.validation.Valid;
@@ -52,10 +53,11 @@ public class TaskController {
         log.info("Received request to get all tasks with filters - status: {}, priority: {}", status, priority);
 
         Long userId = SecurityContextUtil.getCurrentUserId();
+        boolean isAdmin = RoleChecker.isAdmin();
         Sort.Direction direction = Sort.Direction.fromString(sortDirection.toUpperCase());
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        Page<TaskResponseDTO> response = taskService.getAllTasks(status, priority, userId, pageable);
+        Page<TaskResponseDTO> response = taskService.getAllTasks(status, priority, userId, isAdmin, pageable);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

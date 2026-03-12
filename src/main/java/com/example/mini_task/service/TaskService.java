@@ -22,6 +22,7 @@ public interface TaskService{
             Task.TaskStatus status,
             Task.TaskPriority priority,
             Long userId,
+            boolean isAdmin,
             Pageable pageable);
 
     /**

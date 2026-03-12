@@ -50,20 +50,26 @@ public class TaskServiceImpl implements TaskService {
             Task.TaskStatus status,
             Task.TaskPriority priority,
             Long userId,
+            boolean isAdmin,
             Pageable pageable) {
 
-        log.info("Fetching all tasks for user: {} with status: {}, priority: {}", userId, status, priority);
+        log.info("Fetching tasks with status: {}, priority: {}, userId: {}, isAdmin: {}",
+                status, priority, userId, isAdmin);
 
         Page<Task> tasks;
 
-        if (status != null && priority != null) {
-            tasks = taskRepository.findTasksByStatusAndPriority(status, priority, userId, pageable);
-        } else if (status != null) {
-            tasks = taskRepository.findTasksByStatus(status, userId, pageable);
-        } else if (priority != null) {
-            tasks = taskRepository.findTasksByPriority(priority, userId, pageable);
+        if (isAdmin) {
+            tasks = taskRepository.findAllByFilters(status, priority, pageable);
         } else {
-            tasks = taskRepository.findAllByUserId(userId, pageable);
+            if (status != null && priority != null) {
+                tasks = taskRepository.findTasksByStatusAndPriority(status, priority, userId, pageable);
+            } else if (status != null) {
+                tasks = taskRepository.findTasksByStatus(status, userId, pageable);
+            } else if (priority != null) {
+                tasks = taskRepository.findTasksByPriority(priority, userId, pageable);
+            } else {
+                tasks = taskRepository.findAllByUserId(userId, pageable);
+            }
         }
 
         return tasks.map(TaskResponseDTO::fromEntity);

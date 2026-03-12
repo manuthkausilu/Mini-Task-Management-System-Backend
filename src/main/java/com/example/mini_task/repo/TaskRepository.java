@@ -10,6 +10,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
+    @Query("SELECT t FROM Task t WHERE (?1 IS NULL OR t.status = ?1) AND (?2 IS NULL OR t.priority = ?2)")
+    Page<Task> findAllByFilters(Task.TaskStatus status, Task.TaskPriority priority, Pageable pageable);
+
     @Query("SELECT t FROM Task t WHERE t.userId = ?3 AND " +
             "(?1 IS NULL OR t.status = ?1) AND " +
             "(?2 IS NULL OR t.priority = ?2)")
